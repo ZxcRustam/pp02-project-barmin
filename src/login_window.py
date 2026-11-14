@@ -1,7 +1,7 @@
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel,
-                               QLineEdit, QPushButton, QMessageBox)
+from PySide6.QtWidgets import (QDialog, QLineEdit, QPushButton,
+                               QVBoxLayout, QLabel, QMessageBox)
 
-# Фирменный стиль для кнопок (Задание 4.1)
+# Фирменный стиль для кнопок
 BUTTON_STYLE = """
     QPushButton {
         background-color: #70B2AF;
@@ -19,20 +19,22 @@ BUTTON_STYLE = """
 """
 
 
-class LoginWindow(QWidget):
+class LoginWindow(QDialog):
     def __init__(self, db):
         super().__init__()
         self.db = db
         self.user_id = None
         self.role_id = None
-        self.full_name = None  
+        self.full_name = None
 
         self.setWindowTitle("Авторизация")
         self.resize(300, 220)
-        
-        # Общие стили для окна авторизации (Задание 2.1 и 3.1)
+        self.setup_ui()
+
+    # ЗАДАНИЯ 2.1 и 3.1: Поле ввода логина и кнопка «Войти»
+    def setup_ui(self):
         self.setStyleSheet("""
-            QWidget {
+            QDialog {
                 background-color: #FFFFFF;
                 font-family: Calibri;
             }
@@ -54,17 +56,18 @@ class LoginWindow(QWidget):
         layout.addWidget(self.login_input)
 
         self.login_button = QPushButton("Войти")
-        self.login_button.setStyleSheet(BUTTON_STYLE)  # Применяем акцентный цвет (Задание 4.1)
+        self.login_button.setStyleSheet(BUTTON_STYLE)
         self.login_button.clicked.connect(self.check_login)
         layout.addWidget(self.login_button)
 
         self.guest_button = QPushButton("Войти как гость")
-        self.guest_button.setStyleSheet(BUTTON_STYLE)  # Применяем акцентный цвет (Задание 4.1)
+        self.guest_button.setStyleSheet(BUTTON_STYLE)
         self.guest_button.clicked.connect(self.login_as_guest)
         layout.addWidget(self.guest_button)
 
         self.setLayout(layout)
 
+    # ЗАДАНИЯ 4.1 и 5.1: Проверка логина в БД и передача user_id, role_id
     def check_login(self):
         login = self.login_input.text().strip()
 
@@ -72,24 +75,27 @@ class LoginWindow(QWidget):
             QMessageBox.warning(self, "Ошибка", "Введите логин")
             return
 
-        result = self.db.get_user_by_login(login)
+        user = self.db.get_user_by_login(login)
 
-        if result is None:
-            QMessageBox.warning(self, "Ошибка", "Неверный логин")
-        else:
-            self.user_id = result[0]
-            self.role_id = result[1]
-            self.full_name = " ".join(p for p in result[2:5] if p)
+        if user:
+            user_id, role_id = user[0], user[1]
+            self.user_id = user_id
+            self.role_id = role_id
+            self.full_name = " ".join(p for p in user[2:5] if p)
 
-            # Импортируем главное окно и передаем ТРИ параметра: роль, ФИО и user_id
+            self.accept()
             from main import MainWindow
-            self.main_window = MainWindow(role_id=self.role_id, full_name=self.full_name, user_id=self.user_id)
+            self.main_window = MainWindow(
+                role_id=role_id,
+                full_name=self.full_name,
+                user_id=user_id
+            )
             self.main_window.show()
-            self.close()
+        else:
+            QMessageBox.warning(self, "Ошибка", "Пользователь не найден")
 
     def login_as_guest(self):
+        self.accept()
         from main import MainWindow
-        # Для гостя передаем user_id = None
         self.main_window = MainWindow(role_id=None, full_name="Гость", user_id=None)
         self.main_window.show()
-        self.close()
