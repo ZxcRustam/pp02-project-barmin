@@ -31,7 +31,6 @@ class LoginWindow(QDialog):
         self.resize(300, 220)
         self.setup_ui()
 
-    # ЗАДАНИЯ 2.1 и 3.1: Поле ввода логина и кнопка «Войти»
     def setup_ui(self):
         self.setStyleSheet("""
             QDialog {
@@ -67,7 +66,6 @@ class LoginWindow(QDialog):
 
         self.setLayout(layout)
 
-    # ЗАДАНИЯ 4.1 и 5.1: Проверка логина в БД и передача user_id, role_id
     def check_login(self):
         login = self.login_input.text().strip()
 
@@ -75,27 +73,42 @@ class LoginWindow(QDialog):
             QMessageBox.warning(self, "Ошибка", "Введите логин")
             return
 
-        user = self.db.get_user_by_login(login)
+        # Получаем курсор (поддерживает оба варианта названия подключения в Database)
+        conn = getattr(self.db, "conn", None) or getattr(self.db, "connection", None)
+        cursor = conn.cursor() if conn else self.db.cursor
 
-        if user:
-            user_id, role_id = user[0], user[1]
-            self.user_id = user_id
-            self.role_id = role_id
-            self.full_name = " ".join(p for p in user[2:5] if p)
+        cursor.execute(
+            "SELECT user_id, role_id, last_name, first_name, middle_name "
+            "FROM users WHERE login = %s", (login,)
+        )
+        result = cursor.fetchone()
+        if conn:
+            cursor.close()
 
-            self.accept()
-            from main import MainWindow
-            self.main_window = MainWindow(
-                role_id=role_id,
-                full_name=self.full_name,
-                user_id=user_id
-            )
-            self.main_window.show()
-        else:
+        if not result:
             QMessageBox.warning(self, "Ошибка", "Пользователь не найден")
+            return
+
+        user_id, role_id, last_name, first_name, middle_name = result
+        full_name = " ".join(
+            part for part in (last_name, first_name, middle_name) if part
+        )
+
+        self.user_id = user_id
+        self.role_id = role_id
+        self.full_name = full_name
+
+        self.accept()
+        from main import MainWindow
+        self.main_window = MainWindow(
+            user_id=user_id,
+            role_id=role_id,
+            full_name=full_name
+        )
+        self.main_window.show()
 
     def login_as_guest(self):
         self.accept()
         from main import MainWindow
-        self.main_window = MainWindow(role_id=None, full_name="Гость", user_id=None)
+        self.main_window = MainWindow(user_id=None, role_id=None, full_name="Гость")
         self.main_window.show()
