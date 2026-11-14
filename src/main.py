@@ -10,9 +10,9 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QPixmap, QFont
 from PySide6.QtWidgets import (
-    QApplication, QHBoxLayout, QLabel, QMainWindow, 
+    QApplication, QHBoxLayout, QLabel, QMainWindow,
     QScrollArea, QVBoxLayout, QWidget, QPushButton, QMessageBox,
-    QComboBox, QLineEdit
+    QComboBox, QLineEdit, QStackedWidget
 )
 
 from database import Database
@@ -167,9 +167,9 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(10)
 
-        # Шапка приложения
+        # Шапка приложения (остаётся общей для всех страниц)
         header_widget = QWidget()
-        header_widget.setStyleSheet("background-color: #D2F6E7;")  
+        header_widget.setStyleSheet("background-color: #D2F6E7;")
         header_layout = QHBoxLayout(header_widget)
         header_layout.setContentsMargins(15, 10, 15, 10)
 
@@ -189,9 +189,26 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(self.name_label)
 
         self.logout_button = QPushButton("Выход")
-        self.logout_button.setStyleSheet(BUTTON_STYLE)  
+        self.logout_button.setStyleSheet(BUTTON_STYLE)
         header_layout.addWidget(self.logout_button)
-        main_layout.addWidget(header_widget)  
+        main_layout.addWidget(header_widget)
+
+        # === ЗАДАНИЯ 1 и 2: Создание QStackedWidget и 3 страниц ===
+        self.stacked_widget = QStackedWidget()
+        self.catalog_page = QWidget()   # страница 0 — каталог (карточки товаров)
+        self.product_page = QWidget()   # страница 1 — карточка подкаста
+        self.orders_page = QWidget()    # страница 2 — заказы
+
+        self.stacked_widget.addWidget(self.catalog_page)  # индекс 0
+        self.stacked_widget.addWidget(self.product_page)  # индекс 1
+        self.stacked_widget.addWidget(self.orders_page)   # индекс 2
+        self.stacked_widget.setCurrentIndex(0)
+        main_layout.addWidget(self.stacked_widget)
+
+        # Наполнение страницы 0 (Каталог)
+        catalog_layout = QVBoxLayout(self.catalog_page)
+        catalog_layout.setContentsMargins(0, 0, 0, 0)
+        catalog_layout.setSpacing(10)
 
         # --- Панель поиска, фильтрации и кнопок ---
         top_widget = QWidget()
@@ -209,10 +226,10 @@ class MainWindow(QMainWindow):
 
         self.filter_combo = QComboBox()
         self.filter_combo.addItem("Все категории")
-        
+
         for cat in self.db.get_categories():
             self.filter_combo.addItem(str(cat))
-                    
+
         self.filter_combo.currentIndexChanged.connect(self.load_products)
         filter_row.addWidget(self.filter_combo)
 
@@ -222,38 +239,107 @@ class MainWindow(QMainWindow):
         filter_row.addWidget(self.sort_combo)
         top_layout.addLayout(filter_row)
 
-        # Вторая строка: Управляющие кнопки ролей
+        # Вторая строка: Управляющие кнопки (и переключение страниц для проверки)
         buttons_row = QHBoxLayout()
         self.order_button = QPushButton("Купить подкаст")
         self.manager_button = QPushButton("Заказы (менеджер)")
         self.admin_button = QPushButton("Админ-панель")
-        
+
         self.order_button.setStyleSheet(BUTTON_STYLE)
         self.manager_button.setStyleSheet(BUTTON_STYLE)
         self.admin_button.setStyleSheet(BUTTON_STYLE)
-        
+
+        # Привязываем переключение на страницу 1 (Карточка) и страницу 2 (Заказы)
+        self.order_button.clicked.connect(lambda: self.switch_page(1))
+        self.manager_button.clicked.connect(lambda: self.switch_page(2))
+
         buttons_row.addWidget(self.order_button)
         buttons_row.addWidget(self.manager_button)
         buttons_row.addWidget(self.admin_button)
         buttons_row.addStretch()
         top_layout.addLayout(buttons_row)
-        
-        main_layout.addWidget(top_widget)
+
+        catalog_layout.addWidget(top_widget)
 
         # --- Область прокрутки (Scroll Area) для карточек товаров ---
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setStyleSheet("QScrollArea { border: none; background-color: #FFFFFF; }")
-        
+
         self.scroll_content = QWidget()
         self.scroll_content.setStyleSheet("background-color: #FFFFFF;")
         self.products_layout = QVBoxLayout(self.scroll_content)
         self.products_layout.setContentsMargins(15, 10, 15, 10)
         self.products_layout.setSpacing(10)
         self.products_layout.addStretch()
-        
+
         self.scroll_area.setWidget(self.scroll_content)
-        main_layout.addWidget(self.scroll_area)
+        catalog_layout.addWidget(self.scroll_area)
+
+        # Наполнение страницы 1 (Карточка подкаста)
+        product_layout = QVBoxLayout(self.product_page)
+        product_layout.setContentsMargins(15, 15, 15, 15)
+        lbl_prod = QLabel("Карточка подкаста")
+        lbl_prod.setStyleSheet("font-size: 16px; font-weight: bold;")
+        product_layout.addWidget(lbl_prod)
+        product_layout.addStretch()
+
+        # Наполнение страницы 2 (Заказы)
+        orders_layout = QVBoxLayout(self.orders_page)
+        orders_layout.setContentsMargins(15, 15, 15, 15)
+        lbl_ord = QLabel("Список заказов")
+        lbl_ord.setStyleSheet("font-size: 16px; font-weight: bold;")
+        orders_layout.addWidget(lbl_ord)
+        orders_layout.addStretch()
+
+        # === ЗАДАНИЕ 3 и 5: Кнопка «Назад» и тестовое переключение страниц ===
+        bottom_layout = QHBoxLayout()
+        bottom_layout.setContentsMargins(15, 5, 15, 10)
+        
+        self.back_button = QPushButton("Назад")
+        self.back_button.setStyleSheet(BUTTON_STYLE)
+        self.back_button.clicked.connect(self.go_back)
+        bottom_layout.addWidget(self.back_button)
+
+        btn_page2 = QPushButton("Стр. 2 (Карточка)")
+        btn_page2.setStyleSheet(BUTTON_STYLE)
+        btn_page2.clicked.connect(lambda: self.switch_page(1))
+        bottom_layout.addWidget(btn_page2)
+
+        btn_page3 = QPushButton("Стр. 3 (Заказы)")
+        btn_page3.setStyleSheet(BUTTON_STYLE)
+        btn_page3.clicked.connect(lambda: self.switch_page(2))
+        bottom_layout.addWidget(btn_page3)
+
+        bottom_layout.addStretch()
+        main_layout.addLayout(bottom_layout)
+
+
+        # === ЗАДАНИЕ 4: Начальный заголовок окна ===
+        self.setWindowTitle("Мир подкастов — Каталог")
+
+    # ЗАДАНИЕ 3.1: Метод возврата на предыдущую страницу
+    def go_back(self):
+        current_index = self.stacked_widget.currentIndex()
+        if current_index > 0:
+            self.switch_page(current_index - 1)
+
+    # ЗАДАНИЕ 4.1: Переключение страниц со сменой заголовка окна
+    def switch_page(self, index):
+        self.stacked_widget.setCurrentIndex(index)
+        titles = {
+            0: "Мир подкастов — Каталог",
+            1: "Мир подкастов — Карточка подкаста",
+            2: "Мир подкастов — Заказы"
+        }
+        self.setWindowTitle(titles[index])
+        if index == 0:
+            self.refresh_catalog()
+
+    def refresh_catalog(self):
+        if hasattr(self, "load_products"):
+            self.load_products()
+
 
     def setup_role_interface(self):
         self.admin_button.clicked.connect(self.show_admin_panel)
