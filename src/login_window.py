@@ -19,6 +19,15 @@ BUTTON_STYLE = """
 """
 
 
+def validate_login(raw):
+    login = raw.strip()
+    if not login:
+        return None, "Введите логин (пробелы не считаются)"
+    if len(login) < 3:
+        return None, "Логин должен содержать минимум 3 символа"
+    return login, None
+
+
 class LoginWindow(QDialog):
     def __init__(self, db):
         super().__init__()
@@ -67,11 +76,10 @@ class LoginWindow(QDialog):
         self.setLayout(layout)
 
     def check_login(self):
-        login = self.login_input.text().strip()
-
-        # Задание 1.1: Error для пустого логина
-        if not login:
-            QMessageBox.critical(self, "Ошибка", "Введите логин")
+        # Проверка длины и пустого поля через validate_login
+        login, error = validate_login(self.login_input.text())
+        if error:
+            QMessageBox.critical(self, "Ошибка", error)
             return
 
         # Получаем курсор (поддерживает оба варианта названия подключения в Database)
@@ -86,7 +94,7 @@ class LoginWindow(QDialog):
         if conn:
             cursor.close()
 
-        # Задание 1.2: Error для неверного логина
+        # Error для неверного логина
         if not result:
             QMessageBox.critical(self, "Ошибка", "Пользователь не найден")
             return
@@ -100,7 +108,7 @@ class LoginWindow(QDialog):
         self.role_id = role_id
         self.full_name = full_name
 
-        # Задание 3.1: Information для успешного входа
+        # Information для успешного входа
         QMessageBox.information(self, "Информация", f"Добро пожаловать, {full_name}!")
 
         self.accept()

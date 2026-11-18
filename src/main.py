@@ -468,6 +468,15 @@ class MainWindow(QMainWindow):
             self.products_layout.insertWidget(self.products_layout.count() - 1, card)
 
 
+def validate_login(raw):
+    login = raw.strip()
+    if not login:
+        return None, "Введите логин (пробелы не считаются)"
+    if len(login) < 3:
+        return None, "Логин должен содержать минимум 3 символа"
+    return login, None
+
+
 # === Окно авторизации пользователей с фиксированными стилями кнопок ===
 class LoginWindow(QWidget):
     def __init__(self):
@@ -532,9 +541,9 @@ class LoginWindow(QWidget):
         layout.addWidget(self.guest_button)
 
     def handle_login(self):
-        login_text = self.login_input.text().strip()
-        if not login_text:
-            QMessageBox.critical(self, "Ошибка", "Введите логин")
+        login_text, error = validate_login(self.login_input.text())
+        if error:
+            QMessageBox.critical(self, "Ошибка", error)
             return
 
         user_info = self.db.get_user_by_login(login_text)
