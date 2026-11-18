@@ -190,6 +190,7 @@ class MainWindow(QMainWindow):
 
         self.logout_button = QPushButton("Выход")
         self.logout_button.setStyleSheet(BUTTON_STYLE)
+        self.logout_button.clicked.connect(self.handle_logout_click)  # <-- Добавьте эту строку
         header_layout.addWidget(self.logout_button)
         main_layout.addWidget(header_widget)
 
@@ -368,9 +369,25 @@ class MainWindow(QMainWindow):
             self.admin_button.hide()
 
     def handle_logout_click(self):
-        self.auth_screen = LoginWindow()
-        self.auth_screen.show()
-        self.close()
+        if getattr(self, "_logged_out", False) or getattr(self, "_dialog_open", False):
+            return
+        self._dialog_open = True
+
+        reply = QMessageBox.warning(
+            self,
+            "Предупреждение",
+            "Вы уверены, что хотите выйти?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        self._dialog_open = False
+
+        if reply == QMessageBox.StandardButton.Yes:
+            self._logged_out = True
+            self._skip_close_confirm = True
+            self.auth_screen = LoginWindow()
+            self.auth_screen.show()
+            self.close()
+
 
     # === Логика работы Админ-панели (Вывод статистики из PostgreSQL) ===
     def show_admin_panel(self):
@@ -517,20 +534,24 @@ class LoginWindow(QWidget):
     def handle_login(self):
         login_text = self.login_input.text().strip()
         if not login_text:
-            QMessageBox.warning(self, "Внимание", "Поле логина не может быть пустым!")
+            QMessageBox.critical(self, "Ошибка", "Введите логин")
             return
 
         user_info = self.db.get_user_by_login(login_text)
 
         if user_info:
             u_id, r_id, l_name, f_name, m_name = user_info
-            full_name_str = f"{l_name} {f_name} {m_name}".strip()
+            full_name_str = " ".join(p for p in (l_name, f_name, m_name) if p)
+
+            QMessageBox.information(
+                self, "Информация", f"Добро пожаловать, {full_name_str}!"
+            )
 
             self.main_window = MainWindow(role_id=r_id, full_name=full_name_str, user_id=u_id)
             self.main_window.show()
             self.close()
         else:
-            QMessageBox.critical(self, "Ошибка", "Пользователь с таким логином не найден в базе!")
+            QMessageBox.critical(self, "Ошибка", "Пользователь не найден")
 
     def handle_guest(self):
         self.main_window = MainWindow(role_id=None, full_name=None, user_id=None)

@@ -69,8 +69,9 @@ class LoginWindow(QDialog):
     def check_login(self):
         login = self.login_input.text().strip()
 
+        # Задание 1.1: Error для пустого логина
         if not login:
-            QMessageBox.warning(self, "Ошибка", "Введите логин")
+            QMessageBox.critical(self, "Ошибка", "Введите логин")
             return
 
         # Получаем курсор (поддерживает оба варианта названия подключения в Database)
@@ -85,8 +86,9 @@ class LoginWindow(QDialog):
         if conn:
             cursor.close()
 
+        # Задание 1.2: Error для неверного логина
         if not result:
-            QMessageBox.warning(self, "Ошибка", "Пользователь не найден")
+            QMessageBox.critical(self, "Ошибка", "Пользователь не найден")
             return
 
         user_id, role_id, last_name, first_name, middle_name = result
@@ -97,6 +99,9 @@ class LoginWindow(QDialog):
         self.user_id = user_id
         self.role_id = role_id
         self.full_name = full_name
+
+        # Задание 3.1: Information для успешного входа
+        QMessageBox.information(self, "Информация", f"Добро пожаловать, {full_name}!")
 
         self.accept()
         from main import MainWindow
