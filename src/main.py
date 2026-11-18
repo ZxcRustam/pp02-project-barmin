@@ -108,15 +108,14 @@ def create_card(product):
     old_price_label.setAlignment(Qt.AlignmentFlag.AlignRight)
     price_container.addWidget(old_price_label)
     
-    if discount > 0:
-        old_price_label.show()
-    else:
-        old_price_label.hide()
-
     price_container.addWidget(price_label)
     card_layout.addLayout(price_container)
 
     card.setLayout(card_layout)
+
+    # Показываем/скрываем старую цену только ПОСЛЕ того, как у неё появился родитель.
+    # Раньше show() вызывался до card.setLayout() и открывал отдельное белое окошко.
+    old_price_label.setVisible(discount > 0)
 
     if total_quantity <= 3:
         card.setStyleSheet("""
@@ -346,12 +345,8 @@ class MainWindow(QMainWindow):
         self.admin_button.clicked.connect(self.show_admin_panel)
         self.manager_button.clicked.connect(self.show_manager_panel)
         self.order_button.clicked.connect(self.buy_podcast_mock)
-        # Подключаем метод возврата на страницу логирования
-        self.logout_button.clicked.connect(self.handle_logout_click)
 
-        if self.role_id == 1:    
-            self.order_button.hide()
-        elif self.role_id == 1:    # Администратор видит ВСЕ панели управления
+        if self.role_id == 1:    # Администратор видит ВСЕ панели управления
             self.order_button.hide()
             self.manager_button.show()
             self.admin_button.show()
