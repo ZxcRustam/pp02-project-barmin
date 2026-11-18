@@ -29,7 +29,7 @@ from styles import (
 )
 from utils.discount import calculate_discount, calculate_price
 from utils.image_loader import load_cover
-
+from app.product_page import ProductCard
 
 def create_card(product, products_repo=None):
     (product_id, name, category_id, studio, old_price_raw, image_path, total_quantity) = product
@@ -227,5 +227,21 @@ class CatalogPage(QWidget):
         processed_products.sort(key=lambda x: x[0], reverse=not is_ascending)
 
         for _, prod in processed_products:
+            product_id = prod[0]
             card = create_card(prod, products_repo=self.products_repo)
+
+            product_button = QPushButton("Открыть")
+            product_button.setStyleSheet(BUTTON_STYLE)
+            product_button.clicked.connect(
+                lambda checked=False, pid=product_id: self.open_product_card(pid)
+            )
+            layout = card.layout()
+            if layout is not None:
+                layout.addWidget(product_button)
+
             self.products_layout.insertWidget(self.products_layout.count() - 1, card)
+
+    def open_product_card(self, product_id):
+        card = ProductCard(product_id, self)
+        card.exec()
+        self.load_products()
