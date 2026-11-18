@@ -43,7 +43,7 @@ class Database:
         cursor = None
         try:
             cursor = conn.cursor()
-            cursor.execute("SELECT DISTINCT category_id FROM products ORDER BY category_id")
+            cursor.execute("SELECT name FROM categories ORDER BY category_id")
             categories = cursor.fetchall()
             cursor.close()
             # Распаковываем кортежи в плоские элементы
@@ -63,32 +63,33 @@ class Database:
         try:
             cursor = conn.cursor()
             pattern = f"%{search}%"
-            
-            # Если в комбобоксе выбрана строка, очищаем её от лишних скобок, если они есть
+
             clean_category = str(category_text).replace("('", "").replace("',)", "").replace("(", "").replace(")", "").strip()
-            
+
             query = f"""
                 SELECT 
                     p.product_id, 
                     p.name, 
-                    p.category_id, 
+                    c.name AS category_name, 
                     p.manufacturer AS studio, 
                     p.price, 
-                    p.image_path,
+                    p.image_path, 
                     COALESCE(SUM(si.quantity), 0) AS total_quantity
                 FROM products p
+                LEFT JOIN categories c ON p.category_id = c.category_id
                 LEFT JOIN stock_items si ON p.product_id = si.product_id
-                WHERE (p.name ILIKE %s OR p.manufacturer ILIKE %s)  
-                  AND (CAST(p.category_id AS TEXT) = %s OR %s = 'Все категории')
+                WHERE (p.name ILIKE %s OR p.manufacturer ILIKE %s)
+                  AND (c.name = %s OR %s = 'Все категории')
                 GROUP BY 
                     p.product_id, 
                     p.name, 
-                    p.category_id, 
+                    c.name, 
                     p.manufacturer, 
                     p.price, 
                     p.image_path
                 ORDER BY p.price {order}
             """
+
             cursor.execute(query, (pattern, pattern, clean_category, category_text))
             products = cursor.fetchall()
             cursor.close()
@@ -98,6 +99,7 @@ class Database:
             return []
         finally:
             self.release_connection(conn)
+
 
     def get_user_by_login(self, login):
         conn = self.get_connection()

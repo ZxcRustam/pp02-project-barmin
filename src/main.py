@@ -87,7 +87,7 @@ def create_card(product):
     title_label = QLabel(f"{studio} | {name}")
     title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #1A237E;")
     text_layout.addWidget(title_label)
-    text_layout.addWidget(QLabel(f"ID Категории: {category_id}"))
+    text_layout.addWidget(QLabel(f"Категория: {category_id}"))
     text_layout.addWidget(QLabel(f"Доступно для покупки: {int(total_quantity)} лицензий"))
     card_layout.addLayout(text_layout)
 
